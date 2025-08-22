@@ -8,10 +8,11 @@ class Login(BaseClass):
         login_btn.click()
         time.sleep(1)
 
-        self.page.wait_for_selector("//div[@class='relative mt-4']/input[@placeholder='Enter Your Username']", timeout=12000).fill(username)
+        # self.page.wait_for_selector("//div[text() = 'Login with Username']", timeout=12000).click()
+        self.page.wait_for_selector("//input[@placeholder='Username']", timeout=12000).fill(username)
         time.sleep(1)
         self.page.wait_for_selector("//input[@placeholder='Password']", timeout=12000).fill(password)
-        self.page.wait_for_selector("//div[@class='relative flex justify-center']/button[text()='Login']", timeout=12000).click()
+        self.page.wait_for_selector("//div[@class='relative mt-8']/button[text()='Login']", timeout=12000).click()
         time.sleep(3)
 
     def Close_Popupbtnscal(self):
@@ -20,9 +21,4 @@ class Login(BaseClass):
             time.sleep(1)
         except:
             pass
-
-    def relogin(self, username, password):
-            """Re-login after session reset."""
-            print("🔄 Re-logging in...")
-            self.login(username, password)
-            self.Close_Popupbtnscal()
+        
