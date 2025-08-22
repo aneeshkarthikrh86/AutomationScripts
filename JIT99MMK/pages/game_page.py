@@ -1,27 +1,28 @@
 import time
 import os
-import datetime
 from tests.base_page import BaseClass
 from playwright.sync_api import Error
 
 class Game_Click(BaseClass):
-
-    def get_screenshot_path(self, prefix, provider_name, page_num, game_name):
-        """Generate screenshot path with datetime stamp."""
-        dt = datetime.datetime.now().strftime("%d-%m-%y_%H-%M-%S")
-        game_safe = game_name.replace(" ", "_").replace("/", "_")
-        os.makedirs("screenshots", exist_ok=True)
-        return f"screenshots/{prefix}_{provider_name}_page{page_num}_{game_safe}_{dt}.png"
-
+    
     def reset_and_recover(self, provider_name, page_num, retry_index, game_name):
-        """Clears cache, re-logins, navigates back, retries failed game."""
+        """
+        Clears cache, logs in again, navigates back to the same provider and page,
+        then retries the failed game once.
+        """
         print(f"🔄 Resetting session and retrying {provider_name} -> Page {page_num} -> {game_name}")
-
-        # Screenshot for reset
-        screenshot_path = self.get_screenshot_path("reset", provider_name, page_num, game_name)
-        self.page.screenshot(path=screenshot_path)
-        print(f"💾 Screenshot of reset saved: {screenshot_path}")
-
+        time.sleep(10)
+        # Capture screenshot for debugging
+        timestamp = time.strftime("%Y%m%d_%H%M%S")
+        screenshot_name = f"screenshots/{provider_name}_Page{page_num}_{game_name}_{timestamp}.png"
+        os.makedirs("screenshots", exist_ok=True)
+        time.sleep(4)
+        try:
+            self.page.screenshot(path=screenshot_name, full_page=True)
+            print(f"📸 Screenshot saved: {screenshot_name}")
+        except Exception as e:
+            print(f"⚠ Failed to capture screenshot: {e}")
+        
         # Step 1: Clear cache/cookies
         self.context.clear_cookies()
         try:
@@ -34,6 +35,7 @@ class Game_Click(BaseClass):
         from pages.login_page import Login
         from pages.home_page import HomePage
         from pages.Slot_Providers import SlotProvider
+        import os
 
         USERNAME = os.getenv("USERNAME")
         PASSWORD = os.getenv("PASSWORD")
@@ -71,14 +73,14 @@ class Game_Click(BaseClass):
             retry_btn.click()
             print(f"🔁 Retried {game_name} on {provider_name} page {page_num}")
             time.sleep(5)
-            close_btn = "//button/*[@class='w-5 h-5 game_header_close_btn']"
-            if self.page.is_visible(close_btn):
-                self.page.click(close_btn)
-
+            if self.page.is_visible("//button/*[@class='w-5 h-5 game_header_close_btn']"):
+                self.page.click("//button/*[@class='w-5 h-5 game_header_close_btn']")
+    
     def GamesbtnClick(self, provider_name=None):
-        """Click all 'Play Now' buttons, handle success/failure and retries with screenshots."""
-        os.makedirs("screenshots", exist_ok=True)
-
+        """
+        Clicks all 'Play Now' buttons for the current provider.
+        Handles success/failure and recovers automatically on go_back timeouts.
+        """
         # Get total pages
         Total_Pages = self.page.query_selector_all(
             "//div[@class='p-holder admin-pagination']/button[not(contains(@class,'p-next')) and not(contains(@class,'p-prev'))]"
@@ -92,6 +94,7 @@ class Game_Click(BaseClass):
             print(f"=== Now in Page {current_page} ===")
             time.sleep(2)
 
+            # Refresh game buttons for current page
             Game_buttons = self.page.query_selector_all(
                 "//div[@class='game_btn_content']//button[text()='Play Now']"
             )
@@ -111,8 +114,9 @@ class Game_Click(BaseClass):
 
                     # Scroll & click
                     game_button_locator.scroll_into_view_if_needed()
-                    time.sleep(1.5)
+                    time.sleep(2.5)
                     game_button_locator.wait_for(state="visible", timeout=12000)
+                    time.sleep(2.5)
                     game_button_locator.click()
                     close_btn = "//button/*[@class='w-5 h-5 game_header_close_btn']"
                     toast_msg = "//div[@class='toast-message text-sm' and text()='Something went wrong. Try again later.']"
@@ -125,12 +129,12 @@ class Game_Click(BaseClass):
                             break
                         time.sleep(interval)
                     else:
-                        # Timeout: take screenshot
-                        screenshot_path = self.get_screenshot_path("timeout", provider_name, current_page, Gamename)
-                        self.page.screenshot(path=screenshot_path)
-                        print(f"⚠ Timeout waiting for close or toast for {Gamename} → Screenshot saved: {screenshot_path}")
-                        time.sleep(5)
+                        print(f"⚠ Timeout waiting for close button or toast for {Gamename} → Resetting & retrying")
+
+                        # Clear + re-login + go back to provider/page + retry this same game
                         self.reset_and_recover(provider_name, current_page, indexg, Gamename)
+
+                        # After retry, continue with next game
                         continue
 
                     # Handle success/failure
@@ -140,9 +144,7 @@ class Game_Click(BaseClass):
                             self.page.wait_for_selector("//button[text()='Back To Home']", timeout=5000).click()
                             print(f"❌ Failed: {Gamename}")
                         except Exception:
-                            screenshot_path = self.get_screenshot_path("fail", provider_name, current_page, Gamename)
-                            self.page.screenshot(path=screenshot_path)
-                            print(f"❌ Failed (go_back timeout) {Gamename} → Screenshot saved: {screenshot_path}")
+                            print(f"❌ Failed (go_back timeout, clearing cache): {Gamename}")
                             self.page.go_back()
                             try:
                                 self.page.evaluate("localStorage.clear()")
@@ -152,15 +154,12 @@ class Game_Click(BaseClass):
                             if provider_name:
                                 self.reset_and_recover(provider_name, current_page, indexg, Gamename)
                     else:
-                        # Success
-                        time.sleep(5)
+                        time.sleep(10)
                         try:
                             self.page.wait_for_selector(close_btn, timeout=5000).click()
                             print(f"✅ Success: {Gamename}")
                         except Exception:
-                            screenshot_path = self.get_screenshot_path("success", provider_name, current_page, Gamename)
-                            self.page.screenshot(path=screenshot_path)
-                            print(f"✅ Success (go_back timeout) {Gamename} → Screenshot saved: {screenshot_path}")
+                            print(f"✅ Success (go_back timeout, clearing cache): {Gamename}")
                             self.context.clear_cookies()
                             try:
                                 self.page.evaluate("localStorage.clear()")
@@ -182,28 +181,26 @@ class Game_Click(BaseClass):
                         return
 
                 except Exception as e:
-                    screenshot_path = self.get_screenshot_path("error", provider_name, current_page, Gamename)
-                    self.page.screenshot(path=screenshot_path)
-                    print(f"❌ Error on {Gamename}: {e} → Screenshot saved: {screenshot_path}")
-                    time.sleep(5)
+                    print(f"Error on {Gamename}: {e}")
                     self.reset_and_recover(provider_name, current_page, indexg, Gamename)
 
-            # Pagination screenshot
+            # Go to next page
             if current_page < last_page_num:
-                screenshot_path = self.get_screenshot_path("pagination", provider_name, current_page, f"page_{current_page}")
-                self.page.screenshot(path=screenshot_path)
-                print(f"💾 Screenshot of pagination page {current_page} saved: {screenshot_path}")
                 self.click_page_number(current_page + 1)
                 time.sleep(3)
-
+    
     def click_page_number(self, target_page):
-        """Click target page in shifting pagination UI."""
+        """
+        Clicks the given page number in a shifting pagination UI.
+        Will click intermediate pages until the target becomes visible.
+        """
         while True:
             page_buttons = self.page.query_selector_all(
                 "//div[@class='p-holder admin-pagination']/button[not(contains(@class,'p-next')) and not(contains(@class,'p-prev'))]"
             )
             visible_pages = [btn.text_content().strip() for btn in page_buttons]
 
+            # If the target page number is visible, click it and break
             if str(target_page) in visible_pages:
                 for btn in page_buttons:
                     if btn.text_content().strip() == str(target_page):
