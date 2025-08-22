@@ -70,11 +70,13 @@ class Game_Click(BaseClass):
         if page_num > 1:
             self.click_page_number(page_num)
 
-        # Step 6: Retry the same game
+        # Step 6: Retry the same game (with hover + scroll)
         Game_buttons = self.page.query_selector_all("//div[@class='game_btn_content']//button[text()='Play Now']")
         if retry_index < len(Game_buttons):
             retry_btn = Game_buttons[retry_index]
             retry_btn.scroll_into_view_if_needed()
+            retry_btn.hover()   # 👈 ensure hover before click
+            time.sleep(1.5)
             retry_btn.click()
             print(f"🔁 Retried {game_name} on {provider_name} page {page_num}")
             time.sleep(5)
