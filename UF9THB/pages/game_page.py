@@ -22,7 +22,24 @@ class Game_Click(BaseClass):
         self.page.screenshot(path=screenshot_path)
         print(f"💾 Screenshot of reset saved: {screenshot_path}")
 
-        # Step 1: Clear cache/cookies
+        # 🔹 Step 0: Try to close any leftover game modal before reset
+        try:
+            if self.page.is_visible("//button/*[@class='w-5 h-5 game_header_close_btn']"):
+                self.page.click("//button/*[@class='w-5 h-5 game_header_close_btn']")
+                print("🟢 Closed stuck game modal before reset.")
+                time.sleep(2)
+            elif self.page.is_visible("//button[text()='Back To Home']"):
+                self.page.click("//button[text()='Back To Home']")
+                print("🟢 Clicked 'Back To Home' before reset.")
+                time.sleep(2)
+            elif self.page.is_visible("//button[text()='Cancel']"):
+                self.page.click("//button[text()='Cancel']")
+                print("🟢 Clicked 'Cancel' before reset.")
+                time.sleep(2)
+        except Exception as e:
+            print(f"⚠ Could not close game modal: {e}")
+
+        # 🔹 Step 1: Clear cache/cookies
         self.context.clear_cookies()
         try:
             self.page.evaluate("localStorage.clear()")
@@ -30,7 +47,7 @@ class Game_Click(BaseClass):
         except:
             pass
 
-        # Step 2: Re-login
+        # 🔹 Step 2: Re-login
         from pages.login_page import Login
         from pages.home_page import HomePage
         from pages.Slot_Providers import SlotProvider
@@ -43,7 +60,7 @@ class Game_Click(BaseClass):
         login_page.login(USERNAME, PASSWORD)
         login_page.Close_Popupbtnscal()
 
-        # Step 3: Navigate → Slot → Provider
+        # 🔹 Step 3: Navigate → Slot → Provider
         home_page = HomePage()
         home_page.page = self.page
         home_page.click_Slot()
@@ -59,11 +76,11 @@ class Game_Click(BaseClass):
                 btn.click()
                 break
 
-        # Step 4: Navigate to the correct page
+        # 🔹 Step 4: Navigate to correct page
         if page_num > 1:
             self.click_page_number(page_num)
 
-        # Step 5: Retry the same game index
+        # 🔹 Step 5: Retry same game
         Game_buttons = self.page.query_selector_all("//div[@class='game_btn_content']//button[text()='Play Now']")
         if retry_index < len(Game_buttons):
             retry_btn = Game_buttons[retry_index]
@@ -74,6 +91,7 @@ class Game_Click(BaseClass):
             close_btn = "//button/*[@class='w-5 h-5 game_header_close_btn']"
             if self.page.is_visible(close_btn):
                 self.page.click(close_btn)
+
 
     def GamesbtnClick(self, provider_name=None):
         """Click all 'Play Now' buttons, handle success/failure and retries with screenshots."""
@@ -190,9 +208,9 @@ class Game_Click(BaseClass):
 
             # Pagination screenshot
             if current_page < last_page_num:
-                screenshot_path = self.get_screenshot_path("pagination", provider_name, current_page, f"page_{current_page}")
-                self.page.screenshot(path=screenshot_path)
-                print(f"💾 Screenshot of pagination page {current_page} saved: {screenshot_path}")
+                # screenshot_path = self.get_screenshot_path("pagination", provider_name, current_page, f"page_{current_page}")
+                # self.page.screenshot(path=screenshot_path)
+                # print(f"💾 Screenshot of pagination page {current_page} saved: {screenshot_path}")
                 self.click_page_number(current_page + 1)
                 time.sleep(3)
 
