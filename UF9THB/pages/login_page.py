@@ -20,3 +20,9 @@ class Login(BaseClass):
             time.sleep(1)
         except:
             pass
+
+    def relogin(self, username, password):
+            """Re-login after session reset."""
+            print("🔄 Re-logging in...")
+            self.login(username, password)
+            self.Close_Popupbtnscal()
