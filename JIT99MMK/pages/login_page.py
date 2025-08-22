@@ -8,7 +8,7 @@ class Login(BaseClass):
         login_btn.click()
         time.sleep(1)
 
-        self.page.wait_for_selector("//div[@class='relative mt-4']/input[@placeholder='Enter Your Username']", timeout=12000).fill(username)
+        self.page.wait_for_selector("//div[@class='relative mt-4']/input[@placeholder='Username']", timeout=12000).fill(username)
         time.sleep(1)
         self.page.wait_for_selector("//input[@placeholder='Password']", timeout=12000).fill(password)
         self.page.wait_for_selector("//div[@class='relative flex justify-center']/button[text()='Login']", timeout=12000).click()
