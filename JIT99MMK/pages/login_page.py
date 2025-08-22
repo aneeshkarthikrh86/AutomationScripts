@@ -8,7 +8,7 @@ class Login(BaseClass):
         login_btn.click()
         time.sleep(1)
 
-        self.page.wait_for_selector("//div[text() = 'Login with Username']", timeout=12000).click()
+        # self.page.wait_for_selector("//div[text() = 'Login with Username']", timeout=12000).click()
         self.page.wait_for_selector("//input[@placeholder='Username']", timeout=12000).fill(username)
         time.sleep(1)
         self.page.wait_for_selector("//input[@placeholder='Password']", timeout=12000).fill(password)
