@@ -102,9 +102,8 @@ class Game_Click(BaseClass):
 
                     # Scroll & click
                     game_button_locator.scroll_into_view_if_needed()
-                    time.sleep(2.5)
+                    time.sleep(1.5)
                     game_button_locator.wait_for(state="visible", timeout=12000)
-                    time.sleep(2.5)
                     game_button_locator.click()
                     close_btn = "//button/*[@class='w-5 h-5 game_header_close_btn']"
                     toast_msg = "//div[@class='toast-message text-sm' and text()='Something went wrong. Try again later.']"
