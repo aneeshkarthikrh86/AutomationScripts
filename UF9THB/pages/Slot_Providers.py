@@ -2,37 +2,42 @@ import time
 from pages.game_page import Game_Click
 
 class SlotProvider:
-    def __init__(self, page=None, context=None, baseUrl=None, username=None, password=None):
-        self.page = page
-        self.context = context
-        self.baseUrl = baseUrl
-        self.username = username
-        self.password = password
+    def __init__(self):
+        self.page = None
+        self.context = None
+        self.baseUrl = None
+        self.username = None
+        self.password = None
 
-    def list_providers(self):
-        """Iterate through all slot providers and run games for each."""
+    def select_provider(self, provider_name):
+        """Click a specific provider by name"""
+        provider_xpath = "//div[@class='mt-5 flex items-center slot_btn_container w-full overflow-auto light-scrollbar-h pb-[10px]']//button"
+        buttons = self.page.query_selector_all(provider_xpath)
+        for btn in buttons:
+            if btn.text_content().strip() == provider_name:
+                btn.scroll_into_view_if_needed()
+                time.sleep(0.3)
+                btn.click()
+                return True
+        print(f"⚠ Provider not found: {provider_name}")
+        return False
+
+    def List_Provisers(self):
         provider_xpath = "//div[@class='mt-5 flex items-center slot_btn_container w-full overflow-auto light-scrollbar-h pb-[10px]']//button"
         total_providers = len(self.page.query_selector_all(provider_xpath))
 
-        for index in range(1, total_providers):  # skip 0 if 'All'
-            # Refresh buttons to avoid stale element
-            provider_buttons = self.page.query_selector_all(provider_xpath)
-            provider_btn = provider_buttons[index]
-            provider_name = provider_btn.text_content().strip()
+        for indexp in range(1, total_providers):
+            Provider_btns = self.page.query_selector_all(provider_xpath)
+            Provider_btn = Provider_btns[indexp]
+
+            provider_name = Provider_btn.text_content().strip()
             print(f"Provider: {provider_name}")
 
-            # Scroll into view and click
-            provider_btn.scroll_into_view_if_needed()
-            self.page.wait_for_timeout(300)
-            provider_btn.click()
+            Provider_btn.scroll_into_view_if_needed()
+            time.sleep(0.3)
+            Provider_btn.click()
 
-            # Initialize game page handler
-            game_page = Game_Click()
-            game_page.page = self.page
-            game_page.context = self.context
-            game_page.baseUrl = self.baseUrl
+            game_page = Game_Click(self.page, self.context, self.baseUrl)
             game_page.username = self.username
             game_page.password = self.password
-
-            # Run games for this provider
             game_page.GamesbtnClick(provider_name)
