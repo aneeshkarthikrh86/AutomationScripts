@@ -14,23 +14,26 @@ class Game_Click(BaseClass):
         return f"screenshots/{prefix}_{provider_name}_page{page_num}_{game_safe}_{dt}.png"
 
     def reset_and_recover(self, provider_name, page_num, retry_index, game_name):
-        """Clears cache, re-logins, navigates back, retries failed game."""
-        print(f"🔄 Resetting session and retrying {provider_name} -> Page {page_num} -> {game_name}")
+        """Full reset: close stuck game, restart browser, re-login, navigate back, retry game."""
+        print(f"🔄 Resetting FULL session and retrying {provider_name} -> Page {page_num} -> {game_name}")
 
-        # Screenshot for reset
+        # Step 1: Screenshot before reset
         screenshot_path = self.get_screenshot_path("reset", provider_name, page_num, game_name)
-        self.page.screenshot(path=screenshot_path)
-        print(f"💾 Screenshot of reset saved: {screenshot_path}")
-
-        # Step 1: Clear cache/cookies
-        self.context.clear_cookies()
         try:
-            self.page.evaluate("localStorage.clear()")
-            self.page.evaluate("sessionStorage.clear()")
-        except:
-            pass
+            self.page.screenshot(path=screenshot_path)
+            print(f"💾 Screenshot of reset saved: {screenshot_path}")
+        except Exception:
+            print("⚠ Could not capture screenshot during reset")
 
-        # Step 2: Re-login
+        # Step 2: Kill old context and start a fresh one
+        try:
+            self.context.close()
+        except Exception:
+            pass
+        self.context = self.browser.new_context()
+        self.page = self.context.new_page()
+
+        # Step 3: Re-login
         from pages.login_page import Login
         from pages.home_page import HomePage
         from pages.Slot_Providers import SlotProvider
@@ -40,10 +43,14 @@ class Game_Click(BaseClass):
 
         login_page = Login(self.baseUrl)
         login_page.page = self.page
-        login_page.login(USERNAME, PASSWORD)
-        login_page.Close_Popupbtnscal()
+        try:
+            login_page.login(USERNAME, PASSWORD)
+            login_page.Close_Popupbtnscal()
+        except Exception as e:
+            print(f"⚠ Login failed during reset: {e}")
+            return
 
-        # Step 3: Navigate → Slot → Provider
+        # Step 4: Navigate → Slot → Provider
         home_page = HomePage()
         home_page.page = self.page
         home_page.click_Slot()
@@ -59,21 +66,26 @@ class Game_Click(BaseClass):
                 btn.click()
                 break
 
-        # Step 4: Navigate to the correct page
+        # Step 5: Navigate to the correct page
         if page_num > 1:
             self.click_page_number(page_num)
 
-        # Step 5: Retry the same game index
+        # Step 6: Retry the same game index
         Game_buttons = self.page.query_selector_all("//div[@class='game_btn_content']//button[text()='Play Now']")
         if retry_index < len(Game_buttons):
             retry_btn = Game_buttons[retry_index]
             retry_btn.scroll_into_view_if_needed()
             retry_btn.click()
             print(f"🔁 Retried {game_name} on {provider_name} page {page_num}")
+
+            # Small wait then attempt to close
             time.sleep(5)
             close_btn = "//button/*[@class='w-5 h-5 game_header_close_btn']"
-            if self.page.is_visible(close_btn):
-                self.page.click(close_btn)
+            try:
+                self.page.wait_for_selector(close_btn, timeout=5000).click()
+                print(f"✅ Recovered and closed {game_name} after reset")
+            except Exception:
+                print(f"⚠ Could not close {game_name} after reset — continuing anyway")
 
     def GamesbtnClick(self, provider_name=None):
         """Click all 'Play Now' buttons, handle success/failure and retries with screenshots."""
