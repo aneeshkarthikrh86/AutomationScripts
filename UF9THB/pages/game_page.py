@@ -1,4 +1,5 @@
 import time
+import os
 from tests.base_page import BaseClass
 from playwright.sync_api import Error
 
@@ -10,7 +11,18 @@ class Game_Click(BaseClass):
         then retries the failed game once.
         """
         print(f"🔄 Resetting session and retrying {provider_name} -> Page {page_num} -> {game_name}")
-
+        time.sleep(10)
+        # Capture screenshot for debugging
+        timestamp = time.strftime("%Y%m%d_%H%M%S")
+        screenshot_name = f"screenshots/{provider_name}_Page{page_num}_{game_name}_{timestamp}.png"
+        os.makedirs("screenshots", exist_ok=True)
+        time.sleep(4)
+        try:
+            self.page.screenshot(path=screenshot_name, full_page=True)
+            print(f"📸 Screenshot saved: {screenshot_name}")
+        except Exception as e:
+            print(f"⚠ Failed to capture screenshot: {e}")
+        
         # Step 1: Clear cache/cookies
         self.context.clear_cookies()
         try:
