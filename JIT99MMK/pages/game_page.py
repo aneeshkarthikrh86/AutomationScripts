@@ -3,9 +3,99 @@ import os
 import datetime
 from tests.base_page import BaseClass
 from playwright.sync_api import Error
+from playwright.async_api import Page, BrowserContext, TimeoutError
+from recovery_helper import RecoveryHelper
 
 class Game_Click(BaseClass):
+    def __init__(self, page: Page, context: BrowserContext, recovery: RecoveryHelper):
+        self.page = page
+        self.context = context
+        self.recovery = recovery
 
+    async def click_and_play(self, game, game_name, provider_name, provider_index, page_num, game_index):
+        """
+        Click a game, wait for it to load, handle timeout/errors, and apply recovery if needed.
+        """
+        try:
+            # hover until Play Now visible
+            await game.hover()
+            await self.page.wait_for_selector("//button[contains(text(),'Play Now')]", timeout=5000)
+            play_btn = await game.query_selector("//button[contains(text(),'Play Now')]")
+            if play_btn:
+                await play_btn.click()
+            else:
+                print(f"❌ {game_name}: No Play Now button")
+                return self.page, self.context
+
+            # wait for game to load
+            await self.page.wait_for_selector("//button[contains(@class,'close') or contains(@class,'back')]", timeout=60000)
+            print(f"✅ {game_name}: Game loaded successfully")
+
+            # close game after check
+            close_btn = await self.page.query_selector("//button[contains(@class,'close') or contains(@class,'back')]")
+            if close_btn:
+                await close_btn.click()
+
+        except TimeoutError:
+            print(f"⚠️ Timeout while loading {game_name} (Provider {provider_name} Page {page_num})")
+            self.page, self.context = await self._attempt_recovery(provider_name, provider_index, page_num, game_index, game_name)
+
+            # try recovery
+            self.page, self.context = await self._attempt_recovery(
+                provider_name, provider_index, page_num
+            )
+
+        except Exception as e:
+            print(f"🚨 Error while playing {game_name}: {e}")
+            self.page, self.context = await self._attempt_recovery(provider_name, provider_index, page_num, game_index, game_name)
+
+            # try recovery
+            self.page, self.context = await self._attempt_recovery(
+                provider_name, provider_index, page_num
+            )
+
+        return self.page, self.context
+
+    async def _attempt_recovery(self, provider_name, provider_index, page_num, game_index, game_name):
+        """Try soft reset first. If fails, do hard restart and retry the same game once."""
+        # --- Soft reset ---
+        page, context = await self.recovery.reset_and_recover(self.page, self.context, provider_name, page_num)
+
+        if page:
+            print(f"🔁 Retrying {game_name} after soft reset")
+            await self._retry_same_game(game_index, game_name)
+            return page, context
+
+        # --- Hard restart ---
+        page, context, _ = await self.recovery.hard_restart(provider_index, page_num)
+        print(f"🔄 Hard restart done. Retrying {game_name}...")
+
+        # retry after restart
+        await self._retry_same_game(game_index, game_name)
+
+        return page, context
+
+    async def _retry_same_game(self, game_index, game_name):
+        """Find and retry the same game after recovery (soft or hard)."""
+        try:
+            Game_buttons = await self.page.query_selector_all("//div[@class='game_btn_content']//button[text()='Play Now']")
+            if game_index < len(Game_buttons):
+                retry_btn = Game_buttons[game_index]
+                await retry_btn.scroll_into_view_if_needed()
+                await retry_btn.hover()
+                await retry_btn.click()
+                print(f"🔁 Retried {game_name} successfully after recovery")
+
+                # wait briefly & close game if opened
+                await self.page.wait_for_timeout(5000)
+                close_btn = await self.page.query_selector("//button[contains(@class,'close') or contains(@class,'back')]")
+                if close_btn:
+                    await close_btn.click()
+                    print(f"✅ {game_name} closed successfully after retry")
+                else:
+                    print(f"⚠ {game_name} launched but no close button found")
+        except Exception as e:
+            print(f"❌ Retry failed for {game_name}: {e}")
     def get_screenshot_path(self, prefix, provider_name, page_num, game_name):
         """Generate screenshot path with datetime stamp."""
         dt = datetime.datetime.now().strftime("%d-%m-%y_%H-%M-%S")
