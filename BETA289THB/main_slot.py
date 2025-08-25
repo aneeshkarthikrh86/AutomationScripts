@@ -26,12 +26,13 @@ if __name__ == "__main__":
     home_page.home_slot()
 
     # Step 3: Provider + Game testing
-    slot_providers = SlotProvider()
-    slot_providers.page = login_page.page        # reuse same page
-    slot_providers.context = login_page.context  # ✅ pass browser context for clear_cookies
-    slot_providers.baseUrl = BASE_URL            # ✅ pass base url for reset/recover
-    slot_providers.username = USERNAME           # ✅ pass creds
-    slot_providers.password = PASSWORD
+    slot_providers = SlotProvider(
+        login_page.page,
+        login_page.context,
+        baseUrl=BASE_URL,
+        username=USERNAME,
+        password=PASSWORD,
+    )
 
     # Run provider → games flow
     slot_providers.List_Provisers()
