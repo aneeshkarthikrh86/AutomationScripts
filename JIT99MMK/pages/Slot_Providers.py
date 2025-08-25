@@ -1,18 +1,23 @@
 import time
 from tests.base_page import BaseClass
 from pages.game_page import Game_Click
+from pages.recovery_helper import RecoveryHelper   # ✅ import
 
 class SlotProvider:
-    def __init__(self):
-        self.page = None
-        self.context = None
-        self.baseUrl = None
-        self.username = None
-        self.password = None
+    def __init__(self, page, context, baseUrl=None, username=None, password=None):
+        self.page = page
+        self.context = context
+        self.baseUrl = baseUrl
+        self.username = username
+        self.password = password
+        self.recovery = RecoveryHelper(page, context)   # ✅ create recovery helper
 
     def List_Provisers(self):
         # find provider buttons dynamically each loop
-        provider_xpath = "//div[@class='mt-5 flex items-center slot_btn_container w-full overflow-auto light-scrollbar-h pb-[10px]']//button"
+        provider_xpath = (
+            "//div[@class='mt-5 flex items-center slot_btn_container "
+            "w-full overflow-auto light-scrollbar-h pb-[10px]']//button"
+        )
         total_providers = len(self.page.query_selector_all(provider_xpath))
 
         for indexp in range(1, total_providers):  # skipping 0 if that’s 'All'
@@ -29,9 +34,7 @@ class SlotProvider:
             Provider_btn.click()
 
             # Create game page handler with shared context
-            game_page = Game_Click()
-            game_page.page = self.page
-            game_page.context = self.context
+            game_page = Game_Click(self.page, self.context, self.recovery)  # ✅ pass required args
             game_page.baseUrl = self.baseUrl
             game_page.username = self.username
             game_page.password = self.password
