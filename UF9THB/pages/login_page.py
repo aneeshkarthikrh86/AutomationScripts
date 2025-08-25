@@ -12,7 +12,7 @@ class Login(BaseClass):
         self.page.wait_for_selector("//input[@placeholder='Enter Your Username']", timeout=12000).fill(username)
         time.sleep(1)
         self.page.wait_for_selector("//input[@placeholder='Password']", timeout=12000).fill(password)
-        self.page.wait_for_selector("//div[@class='relative mt-8']/button[text()='Login']", timeout=12000).click()
+        self.page.wait_for_selector("//div[@class='relative flex justify-center']/button[text()='Login']", timeout=12000).click()
         time.sleep(3)
 
     def Close_Popupbtnscal(self):
