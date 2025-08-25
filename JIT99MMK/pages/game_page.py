@@ -4,7 +4,7 @@ import datetime
 from tests.base_page import BaseClass
 from playwright.sync_api import Error
 from playwright.async_api import Page, BrowserContext, TimeoutError
-from recovery_helper import RecoveryHelper
+from pages.recovery_helper import RecoveryHelper
 
 class Game_Click(BaseClass):
     def __init__(self, page: Page, context: BrowserContext, recovery: RecoveryHelper):
