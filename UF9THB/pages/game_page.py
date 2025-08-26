@@ -81,7 +81,7 @@ class Game_Click(BaseClass):
                     else:
                         screenshot_path = self.get_screenshot_path("timeout", provider_name, current_page, Gamename)
                         self.page.screenshot(path=screenshot_path)
-                        print(f"⚠ Timeout for {Gamename}")
+                        # print(f"⚠ Timeout for {Gamename}")     # for now when necessary i will again uncomment it.
                         self.retried_games.add(game_key)
                         self.recovery.reset_and_recover(provider_name, current_page, indexg, Gamename, hard_reset=False)
                         continue
@@ -102,7 +102,7 @@ class Game_Click(BaseClass):
                         self.recovery.reset_and_recover(provider_name, current_page, indexg, Gamename, hard_reset)
 
                     elif self.page.is_visible(close_btn):
-                        print(f"✅ Successful: Game {Gamename}")
+                        print(f"✅ Successful: {Gamename}")
                         sleep(10)
                         try:
                             self.page.wait_for_selector(close_btn, timeout=10000).click()

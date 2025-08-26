@@ -19,12 +19,12 @@ class RecoveryHelper(BaseClass):
         return f"screenshots/{prefix}_{provider_name}_page{page_num}_{game_safe}_{dt}.png"
 
     def reset_and_recover(self, provider_name, page_num, game_index, game_name, hard_reset=True):
-        # print(f"🔄 Resetting session ({'HARD' if hard_reset else 'LIGHT'}) → {provider_name} → Page {page_num} → {game_name}") # for now when necessary i will again uncomment it.
+        # print(f"🔄 Resetting session ({'HARD' if hard_reset else 'LIGHT'}) → {provider_name} → Page {page_num} → {game_name}")
 
         screenshot_path = self.get_screenshot_path("reset", provider_name, page_num, game_name)
         try:
             self.page.screenshot(path=screenshot_path, full_page=True, timeout=60000)
-            # print(f"💾 Screenshot saved: {screenshot_path}")  # for now when necessary i will again uncomment it.
+            # print(f"💾 Screenshot saved: {screenshot_path}")
         except Exception as e:
             print(f"⚠ Screenshot failed: {e}")
 
@@ -62,6 +62,7 @@ class RecoveryHelper(BaseClass):
             home_page.click_Slot()
             home_page.home_slot()
 
+            # Select provider button
             provider_buttons = self.page.query_selector_all(
                 "//div[@class='mt-5 flex items-center slot_btn_container w-full overflow-auto light-scrollbar-h pb-[10px]']//button"
             )
@@ -71,10 +72,13 @@ class RecoveryHelper(BaseClass):
                     btn.click()
                     break
 
+            # ✅ FIXED: use Game_Click for pagination
             if page_num > 1:
-                from pages.Slot_Providers import SlotProvider
-                slot_provider = SlotProvider(self.page, self.context, self.baseUrl, self.username, self.password)
-                slot_provider.click_page_number(page_num)
+                from pages.game_page import Game_Click
+                game_click = Game_Click(
+                    self.page, self.context, self.baseUrl, self.username, self.password, recovery=self
+                )
+                game_click.click_page_number(page_num)
 
         # Retry game
         game_buttons = self.page.query_selector_all("//div[@class='game_btn_content']//button[text()='Play Now']")
@@ -84,7 +88,7 @@ class RecoveryHelper(BaseClass):
             retry_btn.hover()
             time.sleep(1.5)
             retry_btn.click()
-            print(f"🔁 Retried {game_name} on {provider_name} page {page_num}")
+            # print(f"🔁 Retried {game_name} on {provider_name} page {page_num}")  # for now when necessary i will again uncomment it.
 
             close_btn = "//button/*[@class='w-5 h-5 game_header_close_btn']"
             toast_msg = "//div[@class='toast-message text-sm' and text()='Something went wrong. Try again later.']"
@@ -95,27 +99,22 @@ class RecoveryHelper(BaseClass):
                 if self.page.is_visible(close_btn) or self.page.is_visible(toast_msg):
                     break
                 time.sleep(1)
-            else:
-                # print(f"⚠ Game launched but neither close nor toast appeared: {game_name}")   # for now when necessary i will again uncomment it.
-                pass
+
             if self.page.is_visible(toast_msg):
-                print(f"❌ Toast appeared for {game_name}. Waiting 3 sec...")
+                # print(f"❌ Toast appeared for {game_name}. Waiting 3 sec...") # for now when necessary i will again uncomment it.
                 time.sleep(3)
                 try:
                     self.page.wait_for_selector(back_btn, timeout=10000).click()
-                    # print(f"✅ Clicked Back To Home for {game_name}")  # for now when necessary i will again uncomment it.
                     print(f"❌ Failed: {game_name}")
                 except:
                     self.page.screenshot(path=screenshot_path)
                     print(f"⚠ Failed to click Back To Home → Screenshot saved: {screenshot_path}")
 
             elif self.page.is_visible(close_btn):
-                # print(f"✅ Game {game_name} launched successfully. Staying 10 sec...")  # for now when necessary i will again uncomment it.
-                print(f"✅ Successful: Game {game_name}")  
+                print(f"✅ Successful: Game {game_name}") 
                 time.sleep(10)
                 try:
                     self.page.wait_for_selector(close_btn, timeout=10000).click()
-                    # print(f"✅ Closed game {game_name}")   # for now when necessary i will again uncomment it.
                 except:
                     self.page.screenshot(path=screenshot_path)
                     print(f"⚠ Could not close game → Screenshot saved: {screenshot_path}")
