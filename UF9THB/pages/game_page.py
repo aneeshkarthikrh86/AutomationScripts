@@ -24,8 +24,6 @@ class Game_Click(BaseClass):
         return f"screenshots/{prefix}_{provider_name}_page{page_num}_{game_safe}_{dt}.png"
 
     def GamesbtnClick(self, provider_name=None):
-        from time import sleep
-
         Total_Pages = self.page.query_selector_all(
             "//div[@class='p-holder admin-pagination']/button[not(contains(@class,'p-next')) and not(contains(@class,'p-prev'))]"
         )
@@ -36,7 +34,7 @@ class Game_Click(BaseClass):
 
         for current_page in range(1, last_page_num + 1):
             print(f"=== Now in Page {current_page} ===")
-            sleep(2)
+            time.sleep(2)
 
             Game_buttons = self.page.query_selector_all(
                 "//div[@class='game_btn_content']//button[text()='Play Now']"
@@ -63,11 +61,11 @@ class Game_Click(BaseClass):
                         try:
                             game_button_locator.wait_for(state="visible", timeout=15000)
                             game_button_locator.scroll_into_view_if_needed()
-                            sleep(1)
+                            time.sleep(1)
                             game_button_locator.click()
                             break
                         except:
-                            sleep(1)
+                            time.sleep(1)
                             if attempt == 2:
                                 raise
 
@@ -77,11 +75,11 @@ class Game_Click(BaseClass):
                     for _ in range(30):
                         if self.page.is_visible(close_btn) or self.page.is_visible(toast_msg):
                             break
-                        sleep(2)
+                        time.sleep(2)
                     else:
                         screenshot_path = self.get_screenshot_path("timeout", provider_name, current_page, Gamename)
                         self.page.screenshot(path=screenshot_path)
-                        # print(f"⚠ Timeout for {Gamename}")     # for now when necessary i will again uncomment it.
+                        print(f"⚠ Timeout for {Gamename}")
                         self.retried_games.add(game_key)
                         self.recovery.reset_and_recover(provider_name, current_page, indexg, Gamename, hard_reset=False)
                         continue
@@ -89,7 +87,7 @@ class Game_Click(BaseClass):
                     if self.page.is_visible(toast_msg):
                         failure_count += 1
                         print(f"❌ Failed: {Gamename}")
-                        sleep(3)
+                        time.sleep(3)
                         try:
                             self.page.wait_for_selector("//button[text()='Back To Home']", timeout=10000).click()
                         except:
@@ -97,19 +95,19 @@ class Game_Click(BaseClass):
                             self.page.screenshot(path=screenshot_path)
 
                         self.retried_games.add(game_key)
-                        # every 5 failures → hard reset
                         hard_reset = failure_count % 5 == 0
                         self.recovery.reset_and_recover(provider_name, current_page, indexg, Gamename, hard_reset)
 
                     elif self.page.is_visible(close_btn):
                         print(f"✅ Successful: {Gamename}")
-                        sleep(10)
+                        time.sleep(10)
                         try:
                             self.page.wait_for_selector(close_btn, timeout=10000).click()
                         except:
                             screenshot_path = self.get_screenshot_path("success", provider_name, current_page, Gamename)
                             self.page.screenshot(path=screenshot_path)
-                    sleep(2.5)
+
+                    time.sleep(2.5)
                     if current_page > 1:
                         self.click_page_number(current_page)
 
@@ -118,22 +116,19 @@ class Game_Click(BaseClass):
                         return
 
                 except Exception as e:
-                    # screenshot_path = self.get_screenshot_path("error", provider_name, current_page, Gamename) # for now when necessary i will again uncomment it.
-                    # self.page.screenshot(path=screenshot_path) # for now when necessary i will again uncomment it. 
-                    # print(f"❌ Error on {Gamename}: {e}") # for now when necessary i will again uncomment it.
-                    sleep(5)
+                    screenshot_path = self.get_screenshot_path("error", provider_name, current_page, Gamename)
+                    self.page.screenshot(path=screenshot_path)
+                    print(f"❌ Error on {Gamename}: {e}")
+                    time.sleep(5)
                     self.retried_games.add(game_key)
-                    # exception always → hard reset    # for now when necessary i will again uncomment it.
-                    self.recovery.reset_and_recover(provider_name, current_page, indexg, Gamename, hard_reset=True)
+                    self.recovery.reset_and_recover(provider_name, current_page, indexg, Gamename, hard_reset=False)
 
             if current_page < last_page_num:
                 self.click_page_number(current_page + 1)
-                sleep(3)
+                time.sleep(3)
 
     def click_page_number(self, target_page: int):
-        import time
-        # print(f"🔹 Attempting to go to page {target_page}")   # for now when necessary i will again uncomment it.
-
+        print(f"🔹 Attempting to go to page {target_page}")
         for attempt in range(3):
             try:
                 pagination_container = self.page.locator("//div[@class='p-holder admin-pagination']")
@@ -156,7 +151,6 @@ class Game_Click(BaseClass):
                     btn.scroll_into_view_if_needed()
                     btn.click()
                     time.sleep(1)
-                    # print(f"✅ Clicked page {target_page}")   # for now when necessary i will again uncomment it.
                     return True
 
                 while True:
@@ -176,7 +170,7 @@ class Game_Click(BaseClass):
                         return True
 
             except Exception as e:
-                # print(f"⚠ Attempt {attempt+1} failed: {e}")    # for now when necessary i will again uncomment it.
+                print(f"⚠ Attempt {attempt+1} failed: {e}")
                 time.sleep(2)
 
         print(f"❌ Could not click page {target_page}")

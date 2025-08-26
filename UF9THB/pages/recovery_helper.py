@@ -19,17 +19,16 @@ class RecoveryHelper(BaseClass):
         return f"screenshots/{prefix}_{provider_name}_page{page_num}_{game_safe}_{dt}.png"
 
     def reset_and_recover(self, provider_name, page_num, game_index, game_name, hard_reset=True):
-        # print(f"🔄 Resetting session ({'HARD' if hard_reset else 'LIGHT'}) → {provider_name} → Page {page_num} → {game_name}")
+        print(f"🔄 Resetting session ({'HARD' if hard_reset else 'LIGHT'}) → {provider_name} → Page {page_num} → {game_name}")
 
         screenshot_path = self.get_screenshot_path("reset", provider_name, page_num, game_name)
         try:
             self.page.screenshot(path=screenshot_path, full_page=True, timeout=60000)
-            # print(f"💾 Screenshot saved: {screenshot_path}")
+            print(f"💾 Screenshot saved: {screenshot_path}")
         except Exception as e:
             print(f"⚠ Screenshot failed: {e}")
 
         if hard_reset:
-            # Clear cookies/storage + reload + re-login 
             try:
                 self.context.clear_cookies()
                 self.page.evaluate("localStorage.clear()")
@@ -37,10 +36,23 @@ class RecoveryHelper(BaseClass):
             except Exception:
                 pass
 
-            self.page.goto(self.baseUrl, wait_until="domcontentloaded", timeout=20000)
+            # ✅ Safe navigation with retries
+            success_nav = False
+            for attempt in range(3):
+                try:
+                    self.page.goto(self.baseUrl, wait_until="domcontentloaded", timeout=60000)
+                    success_nav = True
+                    break
+                except Exception as e:
+                    print(f"⚠ goto attempt {attempt+1} failed: {e}")
+                    time.sleep(5)
+            if not success_nav:
+                print("❌ Could not reload base URL after 3 attempts")
+                return None, None
 
             from pages.login_page import Login
             from pages.home_page import HomePage
+
             login_page = Login(self.baseUrl)
             login_page.page = self.page
             success_login = False
@@ -72,12 +84,10 @@ class RecoveryHelper(BaseClass):
                     btn.click()
                     break
 
-            # ✅ FIXED: use Game_Click for pagination
+            # ✅ Pagination with Game_Click
             if page_num > 1:
                 from pages.game_page import Game_Click
-                game_click = Game_Click(
-                    self.page, self.context, self.baseUrl, self.username, self.password, recovery=self
-                )
+                game_click = Game_Click(self.page, self.context, self.baseUrl, self.username, self.password, recovery=self)
                 game_click.click_page_number(page_num)
 
         # Retry game
@@ -88,20 +98,18 @@ class RecoveryHelper(BaseClass):
             retry_btn.hover()
             time.sleep(1.5)
             retry_btn.click()
-            # print(f"🔁 Retried {game_name} on {provider_name} page {page_num}")  # for now when necessary i will again uncomment it.
+            print(f"🔁 Retried {game_name} on {provider_name} page {page_num}")
 
             close_btn = "//button/*[@class='w-5 h-5 game_header_close_btn']"
             toast_msg = "//div[@class='toast-message text-sm' and text()='Something went wrong. Try again later.']"
             back_btn = "//button[text()='Back To Home']"
 
-            # Wait for either close or toast
             for _ in range(30):
                 if self.page.is_visible(close_btn) or self.page.is_visible(toast_msg):
                     break
                 time.sleep(1)
 
             if self.page.is_visible(toast_msg):
-                # print(f"❌ Toast appeared for {game_name}. Waiting 3 sec...") # for now when necessary i will again uncomment it.
                 time.sleep(3)
                 try:
                     self.page.wait_for_selector(back_btn, timeout=10000).click()
@@ -111,7 +119,7 @@ class RecoveryHelper(BaseClass):
                     print(f"⚠ Failed to click Back To Home → Screenshot saved: {screenshot_path}")
 
             elif self.page.is_visible(close_btn):
-                print(f"✅ Successful: Game {game_name}") 
+                print(f"✅ Successful: Game {game_name}")
                 time.sleep(10)
                 try:
                     self.page.wait_for_selector(close_btn, timeout=10000).click()
