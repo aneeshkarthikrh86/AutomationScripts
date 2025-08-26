@@ -16,21 +16,21 @@ class Login(BaseClass):
         while attempt <= max_attempts:
             try:
                 # Open login modal
-                login_btn = self.page.locator("//div[@class='flex items-center gap-2 mr-2']//button[text()='Login']")
+                login_btn = self.page.locator("//div[@class='flex items-center gap-2 mr-2 flex-row-reverse']//button[text()='Login']")
                 login_btn.wait_for(state="visible", timeout=12000)
                 login_btn.click()
                 time.sleep(1)
 
                 # Fill username & password
-                self.page.wait_for_selector("//input[@placeholder='Username']", timeout=12000).fill(username)
+                self.page.wait_for_selector("//input[@placeholder='Enter Your Username']", timeout=12000).fill(username)
                 time.sleep(0.5)
                 self.page.wait_for_selector("//input[@placeholder='Password']", timeout=12000).fill(password)
 
                 # Click Login
-                self.page.wait_for_selector("//div[@class='relative mt-8']/button[text()='Login']", timeout=12000).click()
+                self.page.wait_for_selector("//div[@class='relative flex justify-center']/button[text()='Login']", timeout=12000).click()
                 time.sleep(2)
                 
-                print(f"✅ Login successful on attempt {attempt}")
+                # print(f"✅ Login successful on attempt {attempt}")  # for now when necessary i will again uncomment it.
                 return True
 
             except TimeoutError as e:
