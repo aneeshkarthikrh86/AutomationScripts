@@ -100,32 +100,10 @@ class RecoveryHelper(BaseClass):
             retry_btn.click()
             print(f"🔁 Retried {game_name} on {provider_name} page {page_num}")
 
-            close_btn = "//button/*[@class='w-5 h-5 game_header_close_btn']"
-            toast_msg = "//div[@class='toast-message text-sm' and text()='Something went wrong. Try again later.']"
-            back_btn = "//button[text()='Back To Home']"
-
-            for _ in range(30):
-                if self.page.is_visible(close_btn) or self.page.is_visible(toast_msg):
-                    break
-                time.sleep(1)
-
-            if self.page.is_visible(toast_msg):
-                time.sleep(3)
-                try:
-                    self.page.wait_for_selector(back_btn, timeout=10000).click()
-                    print(f"❌ Failed: {game_name}")
-                except:
-                    self.page.screenshot(path=screenshot_path)
-                    print(f"⚠ Failed to click Back To Home → Screenshot saved: {screenshot_path}")
-
-            elif self.page.is_visible(close_btn):
-                print(f"✅ Successful: Game {game_name}")
-                time.sleep(10)
-                try:
-                    self.page.wait_for_selector(close_btn, timeout=10000).click()
-                except:
-                    self.page.screenshot(path=screenshot_path)
-                    print(f"⚠ Could not close game → Screenshot saved: {screenshot_path}")
+            # ✅ Use shared safe exit logic from Game_Click
+            from pages.game_page import Game_Click
+            temp_game_click = Game_Click(self.page, self.context, self.baseUrl, self.username, self.password, recovery=self)
+            temp_game_click.handle_game_exit(game_name)
 
             time.sleep(3)
 

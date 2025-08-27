@@ -23,6 +23,50 @@ class Game_Click(BaseClass):
         os.makedirs("screenshots", exist_ok=True)
         return f"screenshots/{prefix}_{provider_name}_page{page_num}_{game_safe}_{dt}.png"
 
+    def handle_game_exit(self, game_name: str):
+        """Shared safe method for closing games / handling toast popups."""
+        close_btn = "//button/*[@class='w-5 h-5 game_header_close_btn']"
+        toast_msg = "//div[@class='toast-message text-sm' and text()='Something went wrong. Try again later.']"
+        back_btn = "//button[text()='Back To Home']"
+
+        try:
+            if self.page.is_visible(close_btn):
+                print(f"⏳ Close button detected for {game_name}, waiting 10s...")
+                time.sleep(10)
+                try:
+                    self.page.click(close_btn, timeout=5000)
+                    print(f"✅ Closed {game_name}")
+                    return True
+                except Exception:
+                    print(f"⚠ Close btn failed (stale) → using page.go_back()")
+                    self.page.go_back(timeout=20000)
+                    return True
+
+            elif self.page.is_visible(toast_msg):
+                print(f"❌ Toast error for {game_name}, waiting for Back To Home...")
+                time.sleep(3)
+                try:
+                    self.page.wait_for_selector(back_btn, timeout=10000).click()
+                    print(f"↩️ Back to lobby from {game_name}")
+                    return False
+                except Exception:
+                    print(f"⚠ Back btn failed (stale) → using page.go_back()")
+                    self.page.go_back(timeout=20000)
+                    return False
+
+            else:
+                print(f"⚠ No close/back/toast found → fallback page.go_back() for {game_name}")
+                self.page.go_back(timeout=20000)
+                return True
+
+        except Exception as e:
+            print(f"⚠ handle_game_exit error for {game_name}: {e}")
+            try:
+                self.page.go_back(timeout=20000)
+                return True
+            except:
+                return False
+
     def GamesbtnClick(self, provider_name=None):
         Total_Pages = self.page.query_selector_all(
             "//div[@class='p-holder admin-pagination']/button[not(contains(@class,'p-next')) and not(contains(@class,'p-prev'))]"
@@ -69,6 +113,7 @@ class Game_Click(BaseClass):
                             if attempt == 2:
                                 raise
 
+                    # wait until either close_btn or toast_msg appears
                     close_btn = "//button/*[@class='w-5 h-5 game_header_close_btn']"
                     toast_msg = "//div[@class='toast-message text-sm' and text()='Something went wrong. Try again later.']"
 
@@ -84,28 +129,13 @@ class Game_Click(BaseClass):
                         self.recovery.reset_and_recover(provider_name, current_page, indexg, Gamename, hard_reset=False)
                         continue
 
-                    if self.page.is_visible(toast_msg):
+                    # ✅ use the new safe exit handler
+                    result = self.handle_game_exit(Gamename)
+                    if result is False:
                         failure_count += 1
-                        print(f"❌ Failed: {Gamename}")
-                        time.sleep(3)
-                        try:
-                            self.page.wait_for_selector("//button[text()='Back To Home']", timeout=10000).click()
-                        except:
-                            screenshot_path = self.get_screenshot_path("fail", provider_name, current_page, Gamename)
-                            self.page.screenshot(path=screenshot_path)
-
                         self.retried_games.add(game_key)
                         hard_reset = failure_count % 5 == 0
                         self.recovery.reset_and_recover(provider_name, current_page, indexg, Gamename, hard_reset)
-
-                    elif self.page.is_visible(close_btn):
-                        print(f"✅ Successful: {Gamename}")
-                        time.sleep(10)
-                        try:
-                            self.page.wait_for_selector(close_btn, timeout=10000).click()
-                        except:
-                            screenshot_path = self.get_screenshot_path("success", provider_name, current_page, Gamename)
-                            self.page.screenshot(path=screenshot_path)
 
                     time.sleep(2.5)
                     if current_page > 1:
