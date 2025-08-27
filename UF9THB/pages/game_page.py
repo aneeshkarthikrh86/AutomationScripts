@@ -24,17 +24,33 @@ class Game_Click(BaseClass):
         return f"screenshots/{prefix}_{provider_name}_page{page_num}_{game_safe}_{dt}.png"
 
     def handle_game_exit(self, game_name: str):
-        """Shared safe method for closing games / handling toast popups."""
-        close_btn = "//button/*[@class='w-5 h-5 game_header_close_btn']"
-        toast_msg = "//div[@class='toast-message text-sm' and text()='Something went wrong. Try again later.']"
-        back_btn = "//button[text()='Back To Home']"
+        """
+        Shared safe method for closing games / handling toast popups.
+        - Waits for iframe/game to actually load before closing.
+        - Falls back to go_back() if stale element.
+        """
+        close_btn_selector = "//button/*[@class='w-5 h-5 game_header_close_btn']"
+        toast_selector = "//div[@class='toast-message text-sm' and contains(text(),'Something went wrong')]"
+        back_btn_selector = "//button[text()='Back To Home']"
+        iframe_selector = "//iframe[contains(@class,'game_iframe')]"   # adjust if you have a stable locator
+        common_image_xpath = "//img"  # or a known loading element inside iframe
 
         try:
-            if self.page.is_visible(close_btn):
-                print(f"⏳ Close button detected for {game_name}, waiting 10s...")
-                time.sleep(10)
+            # ✅ Case 1: Close button visible
+            if self.page.is_visible(close_btn_selector):
+                print(f"⏳ Close button detected for {game_name}, waiting for game iframe...")
                 try:
-                    self.page.click(close_btn, timeout=5000)
+                    # Wait for iframe or game image (so we know it really loaded)
+                    self.page.wait_for_selector(iframe_selector, timeout=15000)
+                    self.page.wait_for_selector(common_image_xpath, timeout=15000)
+                except Exception:
+                    print(f"⚠ Game iframe not detected for {game_name}, continuing anyway.")
+
+                print(f"⏳ Waiting 10s before closing {game_name}...")
+                time.sleep(10)
+
+                try:
+                    self.page.click(close_btn_selector, timeout=5000)
                     print(f"✅ Closed {game_name}")
                     return True
                 except Exception:
@@ -42,18 +58,25 @@ class Game_Click(BaseClass):
                     self.page.go_back(timeout=20000)
                     return True
 
-            elif self.page.is_visible(toast_msg):
-                print(f"❌ Toast error for {game_name}, waiting for Back To Home...")
+            # ✅ Case 2: Toast error visible
+            elif self.page.is_visible(toast_selector):
+                print(f"❌ Toast error for {game_name}, waiting 3s before back...")
                 time.sleep(3)
                 try:
-                    self.page.wait_for_selector(back_btn, timeout=10000).click()
-                    print(f"↩️ Back to lobby from {game_name}")
-                    return False
+                    if self.page.is_visible(back_btn_selector):
+                        self.page.click(back_btn_selector, timeout=5000)
+                        print(f"↩️ Back to lobby from {game_name}")
+                        return False
+                    else:
+                        print(f"⚠ Back button not visible, fallback go_back()")
+                        self.page.go_back(timeout=20000)
+                        return False
                 except Exception:
                     print(f"⚠ Back btn failed (stale) → using page.go_back()")
                     self.page.go_back(timeout=20000)
                     return False
 
+            # ✅ Case 3: Neither close nor toast found
             else:
                 print(f"⚠ No close/back/toast found → fallback page.go_back() for {game_name}")
                 self.page.go_back(timeout=20000)
