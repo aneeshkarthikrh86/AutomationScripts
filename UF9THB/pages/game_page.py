@@ -43,6 +43,7 @@ class Game_Click(BaseClass):
                     # Wait for iframe or game image (so we know it really loaded)
                     self.page.wait_for_selector(iframe_selector, timeout=15000)
                     self.page.wait_for_selector(common_image_xpath, timeout=15000)
+                    print("Success: {game_name}")
                 except Exception:
                     print(f"⚠ Game iframe not detected for {game_name}, continuing anyway.")
 
@@ -56,6 +57,7 @@ class Game_Click(BaseClass):
                 except Exception:
                     print(f"⚠ Close btn failed (stale) → using page.go_back()")
                     self.page.go_back(timeout=20000)
+                    print(f"✅ Closed {game_name}")
                     return True
 
             # ✅ Case 2: Toast error visible
@@ -66,10 +68,12 @@ class Game_Click(BaseClass):
                     if self.page.is_visible(back_btn_selector):
                         self.page.click(back_btn_selector, timeout=5000)
                         print(f"↩️ Back to lobby from {game_name}")
+                        print("Failed: {game_name}")
                         return False
                     else:
                         print(f"⚠ Back button not visible, fallback go_back()")
                         self.page.go_back(timeout=20000)
+                        print("Failed: {game_name}")
                         return False
                 except Exception:
                     print(f"⚠ Back btn failed (stale) → using page.go_back()")
